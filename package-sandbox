@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+shift # -c
+
+npm_lifecycle_event=${npm_lifecycle_event:-unknown}
+
+PROFILE_FILES=""
+PROFILE=""
+
+function exec() {
+    echo "$0 will execute ${npm_lifecycle_event} in a sandbox as per ${PROFILE_FILES}:"
+    echo "${PROFILE}"
+    echo
+
+    PROFILE="$(echo "${PROFILE}" | sed "s|\n||g")"
+    sandbox-exec -p "${PROFILE}" sh -c "$@"
+}
+
+[ -z "${PACKAGE_SANDBOX_TRACE:-}" ] || {
+    PROFILE_FILES="trace"
+    PROFILE=$(cat <<EOF
+(version 1)
+(debug all)
+(trace "package.${npm_lifecycle_event}.trace.sb")
+EOF
+                   )
+    exec "$@"
+    exit 0
+}
+
+PROFILE_DEFAULT=$(cat <<EOF
+(version 1)
+(allow default)
+(deny network*)
+EOF
+               )
+
+PACKAGE_SANDBOX_PATH="$(npm_config_package_sandbox_path= npm config get package-sandbox-path)"
+[ -z "${PACKAGE_SANDBOX_PATH}" ] || {
+    [ ! -f "${PACKAGE_SANDBOX_PATH}" ] || {
+        PROFILE_FILES="${PROFILE_FILES} ${PACKAGE_SANDBOX_PATH}"
+        PROFILE="${PROFILE}$(cat ${PACKAGE_SANDBOX_PATH})"
+    }
+}
+
+PACKAGE_SANDBOX_PATH_USER="$(cd && npm_config_package_sandbox_path= npm config get package-sandbox-path)"
+[ -z "${PACKAGE_SANDBOX_PATH_USER}" ] || {
+    [ ! -f "${PACKAGE_SANDBOX_PATH_USER}" ] || {
+        PROFILE_FILES="${PROFILE_FILES} ${PACKAGE_SANDBOX_PATH_USER}"
+        PROFILE="${PROFILE}$(cat ${PACKAGE_SANDBOX_PATH_USER})"
+    }
+}
+
+PACKAGE_SANDBOX_PATH_GLOBAL="$(npm_config_package_sandbox_path= npm config get package-sandbox-path --global)"
+[ -z "${PACKAGE_SANDBOX_PATH_GLOBAL}" ] || {
+    [ ! -f "${PACKAGE_SANDBOX_PATH_GLOBAL}" ] || {
+        PROFILE_FILES="${PROFILE_FILES} ${PACKAGE_SANDBOX_PATH_GLOBAL}"
+        PROFILE="${PROFILE}$(cat ${PACKAGE_SANDBOX_PATH_GLOBAL})"
+    }
+}
+
+[ -n "${PROFILE_FILES}" ] || {
+    PROFILE_FILES="default"
+    PROFILE="${PROFILE}${PROFILE_DEFAULT}"
+}
+
+exec "$@"

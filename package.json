@@ -1,0 +1,18 @@
+{
+  "name": "package-sandbox",
+  "version": "0.0.1",
+  "scripts": {
+    "ping-google": "ping -c1 google.com",
+    "ping-localhost": "ping -c1 localhost",
+    "write-cwd": "touch package-sandbox-test && echo 123 >./package-sandbox-test && rm package-sandbox-test",
+    "write-home": "cd && touch package-sandbox-test && echo 123 >./package-sandbox-test && rm package-sandbox-test"
+  },
+  "license": "Unlicense",
+  "files": [
+    "package-sandbox"
+  ],
+  "devDependencies": {
+    "dtrace-provider": "*",
+    "java": "*"
+  }
+}
